@@ -20,6 +20,20 @@
     }
 </script>
 
+<div class="fixed p-2 bg-gray-400 shadow rounded-r">
+    <div class="mb-1 text-lg font-semibold">Inputs</div>
+    {#each inputs as input, idx}
+        <div
+            class="ml-2 pl-1 border-l-2 border-gray-400"
+            class:selected={currentInput == idx}
+            class:resolved={currentInput > idx}>
+            -
+            {input.name}
+        </div>
+    {/each}
+    <div class="mt-2 font-hairline text-sm">Resolved {currentInput}/{inputs.length}</div>
+</div>
+
 <div class="container mx-auto flex justify-center items-center">
     <div class="mt-10">
         <div class="text-4xl font-bold font-serif mb-3 text-center" in:blur>
@@ -34,3 +48,12 @@
             {...currentInputComponent.args} />
     </div>
 </div>
+
+<style>
+    .selected {
+        @apply border-yellow-500;
+    }
+    .resolved {
+        @apply border-green-500;
+    }
+</style>
