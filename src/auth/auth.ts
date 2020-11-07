@@ -45,6 +45,14 @@ export function loginByProfile(loginProfile: Profile): Promise<void> {
         });
 }
 
+type LogoutResetFunction = () => void;
+const logoutResets: LogoutResetFunction[] = [];
+
+export function registerLogoutFunction(logoutFunction: LogoutResetFunction) {
+    logoutResets.push(logoutFunction);
+}
+
 export function logout(): void {
+    logoutResets.forEach((f) => f());
     login.set(undefined);
 }

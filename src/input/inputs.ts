@@ -1,10 +1,11 @@
 import { writable } from 'svelte/store';
+import { registerLogoutFunction } from '../auth/auth';
+import { assertDefined } from '../assert';
 import type { Input } from '../config/config';
 import type ResolvedInput from './ResolvedInput';
 import type ComponentDefinition from '../svelte/ComponentDefinition';
 
 import StackInputPlugin from '../plugin/cloudformation/StackInputPlugin';
-import { assertDefined } from '../assert';
 
 export const inputs = writable<ResolvedInput[]>(undefined);
 
@@ -20,3 +21,5 @@ export function resolveInputComponent(input: Input): ComponentDefinition {
     );
     return plugin.inputComponent(input);
 }
+
+registerLogoutFunction(() => inputs.set(undefined));
