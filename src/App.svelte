@@ -1,18 +1,26 @@
 <script lang="ts">
     import TailwindCss from './TailwindCss.svelte';
     import { login } from './auth/auth';
-    import ComponentDefinition from './svelte/ComponentDefinition';
-    import Login from './ui/Login.svelte';
-    import S3Edit from './ui/S3Edit.svelte';
-    import PickCloudFormationStack from './ui/PickCloudFormationStack.svelte';
+    import { inputs } from './input/inputs';
+    import { defaultConfig } from './defaults';
+
     import NavBar from './ui/NavBar.svelte';
+    import Login from './ui/Login.svelte';
+    import ResolveInputs from './ui/ResolveInputs.svelte';
+    import S3Edit from './ui/S3Edit.svelte';
+    import ComponentDefinition from './svelte/ComponentDefinition';
 
     let component: ComponentDefinition;
     $: {
         if (!$login) {
             component = new ComponentDefinition(Login);
         } else {
-            component = new ComponentDefinition(PickCloudFormationStack);
+            if (!$inputs) {
+                const config = defaultConfig;
+                component = new ComponentDefinition(ResolveInputs, { inputs: config.inputs });
+            } else {
+                component = new ComponentDefinition(S3Edit);
+            }
         }
     }
 </script>
