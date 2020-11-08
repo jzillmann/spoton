@@ -1,5 +1,5 @@
 <div
-    class="mr-3 mt-3 ax-w-sm bg-gray-400 rounded shadow cursor-pointer hover:shadow-lg transform transition duration-200 hover:scale-105">
+    class="mr-3 mt-3 ax-w-sm bg-gray-400 rounded shadow-lg cursor-pointer hover:shadow-xl transform transition duration-200 hover:scale-105">
     <div class="p-2 text-lg font-semibold">
         <slot name="header" />
     </div>

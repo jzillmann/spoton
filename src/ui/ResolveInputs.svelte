@@ -38,9 +38,7 @@
     <div class="mt-10">
         <div class="text-4xl font-bold font-serif mb-3 text-center" in:blur>
             Pick
-            {#key inputs[currentInput]}
-                <div in:blur>{inputs[currentInput].name} | {inputs[currentInput].type}</div>
-            {/key}
+            <div>{inputs[currentInput].type}</div>
         </div>
         <svelte:component
             this={currentInputComponent.component}
@@ -51,9 +49,9 @@
 
 <style>
     .selected {
-        @apply border-yellow-500;
+        @apply border-teal-500;
     }
     .resolved {
-        @apply border-green-500;
+        @apply border-indigo-400;
     }
 </style>
