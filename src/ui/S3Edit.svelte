@@ -24,7 +24,7 @@
     let textContent: string;
 
     let promise: Promise<TextContent>;
-    let saveError;
+    let saveError: Error;
     function refresh() {
         promise = $s3Client
             .send(new GetObjectCommand({ Bucket: bucket, Key: file, ResponseCacheControl: 'no-cache' }))
@@ -43,12 +43,17 @@
     function save() {
         saveError = null;
         $s3Client
-            .send(new PutObjectCommand({ Bucket: bucket, Key: file, Body: textContent }))
+            .send(new PutObjectCommand({ Bucket: bucket, Key: file, Body: textContent.replace('<br>', '') }))
             .then((_) => refresh())
             .catch((error) => (saveError = error));
     }
 
     refresh();
+    $: {
+        if (textContent) {
+            console.log(textContent.replace('<br>', ''));
+        }
+    }
 </script>
 
 <div class="container mx-auto flex justify-center" in:blur>
@@ -82,7 +87,18 @@
                 </div>
                 <div
                     bind:innerHTML={textContent}
-                    class="p-2 whitespace-pre-wrap outline-none"
+                    on:keydown={(event) => {
+                        if (event.key === 'Enter') {
+                            document.execCommand('insertLineBreak');
+                            event.preventDefault();
+                        }
+                    }}
+                    on:paste={(event) => {
+                        event.preventDefault();
+                        var text = event.clipboardData.getData('text/plain');
+                        document.execCommand('insertText', false, text);
+                    }}
+                    class="p-2 inline-block whitespace-pre-wrap outline-none"
                     role="textbox"
                     contenteditable>
                     {content.text}
@@ -99,7 +115,7 @@
                     units: ['d', 'h', 'm', 's'],
                 })}
             </div>
-            {#if textContent === content.text}
+            {#if textContent === content.text || textContent?.replace('<br>', '') === content.text}
                 <div class="flex p-2 mt-2 bg-teal-600 rounded-md cursor-pointer hover:shadow-md" on:click={refresh}>
                     <svg
                         class="fill-current stroke-current w-6 h-6 mr-1"
