@@ -3,6 +3,20 @@ import type { SharedConfigInit } from '@aws-sdk/shared-ini-file-loader';
 import ProfileOrigin from './auth/ProfileOrigin';
 import { defaultRegion } from './defaults';
 
+export function initExternal(document: Document) {
+    const externalApi = window['externalApi'];
+    if (!externalApi) {
+        return;
+    }
+    document.addEventListener('click', function (event: Event) {
+        const href = event.target['href'];
+        if (href && href.startsWith('http')) {
+            event.preventDefault();
+            externalApi.open(href);
+        }
+    });
+}
+
 export async function loadSystemProfiles(): Promise<Profile[]> {
     const externalApi = window['externalApi'];
     if (!externalApi) {
