@@ -48,7 +48,12 @@
 
     let error: Error;
     let processRequest = false;
+    let message: string;
+
     function refresh() {
+        doRefresh(true);
+    }
+    function doRefresh(message: boolean) {
         processRequest = true;
         error = null;
         $s3Client
@@ -63,6 +68,13 @@
                 fetchedContent = { text, lastModified, lastSynced } as TextContent;
                 changedContent = text !== fetchedContent.text;
                 editor.updateCode(text);
+                if (message) {
+                    if (changedContent) {
+                        setMessage('Change detected');
+                    } else {
+                        setMessage('No change detected');
+                    }
+                }
             })
             .catch((error) => (error = error))
             .finally(() => (processRequest = false));
@@ -79,12 +91,20 @@
                     Body: editor.toString(),
                 })
             )
-            .then((_) => refresh())
+            .then((_) => {
+                setMessage('Saved successfully');
+                doRefresh(false);
+            })
             .catch((error) => (error = error))
             .finally(() => (processRequest = false));
     }
 
-    refresh();
+    function setMessage(content: string) {
+        message = content;
+        setTimeout(() => (message = undefined), 2000);
+    }
+
+    doRefresh(false);
 </script>
 
 <div class="container mx-auto flex justify-center" in:blur>
@@ -125,7 +145,7 @@
                     units: ['d', 'h', 'm', 's'],
                 })}
             </div>
-            <div class="inline-block mt-1">
+            <div class="inline-block mt-2">
                 <EitherOr either={!changedContent}>
                     <span slot="either">
                         <Button
@@ -145,6 +165,11 @@
                     </span>
                 </EitherOr>
             </div>
+            {#if message}
+                <div class="mt-2 border-t-2 pt-1 border-gray-500 border-opacity-25 text-sm tracking-tighter" transition:slide>
+                    {message}
+                </div>
+            {/if}
         </div>
     {/if}
 </div>
