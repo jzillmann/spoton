@@ -45,6 +45,7 @@
         "@aws-sdk/client-ec2": "^1.0.0-rc.4",
         "@aws-sdk/client-iam": "^1.0.0-rc.4",
         "@aws-sdk/client-s3": "^1.0.0-rc.2",
+        "codejar": "^3.2.2",
         "humanize-duration": "^3.24.0"
     }
 }

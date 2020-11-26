@@ -1,11 +1,11 @@
 <script lang="ts">
     interface TextContent {
         text: string;
-        lineCount: number;
         lastModified: Date;
         lastSynced: Date;
     }
 
+    import { onMount } from 'svelte';
     import { blur, slide } from 'svelte/transition';
     import { GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
     import { streamCollector } from '@aws-sdk/fetch-http-handler';
@@ -13,18 +13,41 @@
     import { inputs } from '../input/inputs';
     import humanizeDuration from 'humanize-duration';
     import { now, displayDate } from '../svelte/dates';
+    import { CodeJar } from 'codejar';
+    import { withLineNumbers } from 'codejar/linenumbers';
 
     const variables = $inputs.flatMap((input) => input.variables);
-    const encoder = new TextDecoder('utf-8');
-
-    $: console.log(variables);
-
+    // $: console.log(variables);
     const bucket = variables.find((v) => v.key.includes('S3AssetsBucketName')).value;
+    const encoder = new TextDecoder('utf-8');
     const file = 'config-files/overrides.properties';
-    let textContent: string;
+    let fetchedContent: string;
+    let changedContent = false;
+
+    let editorNode: HTMLElement;
+    let editor: CodeJar;
+
+    onMount(() => {
+        console.log('init editor');
+        editor = CodeJar(
+            editorNode,
+            withLineNumbers(() => {}, {
+                class: 'opacity-25',
+                color: '#edf2f7',
+            })
+        );
+        editor.onUpdate((text) => {
+            console.log('update', text === fetchedContent);
+
+            changedContent = text !== fetchedContent;
+        });
+        return () => {
+            editor.destroy();
+        };
+    });
 
     let promise: Promise<TextContent>;
-    let saveError: Error;
+    let error: Error;
     function refresh() {
         promise = $s3Client
             .send(new GetObjectCommand({ Bucket: bucket, Key: file, ResponseCacheControl: 'no-cache' }))
@@ -35,29 +58,34 @@
             })
             .then(([uint8Array, lastModified, lastSynced]) => {
                 const text = encoder.decode(uint8Array as Uint8Array);
-                const lineCount = (text.match(/\n/g) || '').length;
-                return { text, lineCount, lastModified, lastSynced } as TextContent;
-            });
+                fetchedContent = text;
+                editor.updateCode(text);
+                return { text, lastModified, lastSynced } as TextContent;
+            })
+            .catch((error) => (error = error));
     }
 
     function save() {
-        saveError = null;
-        $s3Client
-            .send(
-                new PutObjectCommand({
-                    Bucket: bucket,
-                    Key: file,
-                    Body: textContent.replace('<br>', '').replace('<div>', ''),
-                })
-            )
-            .then((_) => refresh())
-            .catch((error) => (saveError = error));
+        error = null;
+        console.log('save', editor.toString());
+        // $s3Client
+        //     .send(
+        //         new PutObjectCommand({
+        //             Bucket: bucket,
+        //             Key: file,
+        //             Body: editor.toString(),
+        //         })
+        //     )
+        //     .then((_) => refresh())
+        //     .catch((error) => (error = error));
     }
 
     refresh();
     $: {
-        if (textContent) {
-            console.log(textContent.replace('<br>', ''));
+        console.log('changedContent', changedContent);
+
+        if (fetchedContent) {
+            // console.log(fetchedContent);
         }
     }
 </script>
@@ -76,42 +104,18 @@
                 href="https://console.aws.amazon.com/s3/buckets/{bucket}"
                 target="_blank">{bucket}</a>
         </div>
-        {#if saveError}
-            <div class="text-red-800 mb-4 max-w-lg" transition:slide>ERROR: {saveError}</div>
+        {#if error}
+            <div class="text-red-800 mb-4 max-w-lg" transition:slide>ERROR: {error}</div>
         {/if}
     </div>
 </div>
 
-{#await promise then content}
-    <div class="flex" in:slide>
-        <div class="container mx-auto flex mb-8 justify-center">
-            <div class="flex mb-4 bg-gray-300 focus-within:border-orange-700 border-l-4 border-r-4 shadow-md rounded">
-                <div class="p-2 bg-gray-500">
-                    {#each Array(content.lineCount) as _, idx}
-                        <div>{idx}</div>
-                    {/each}
-                </div>
-                <div
-                    bind:innerHTML={textContent}
-                    on:keydown={(event) => {
-                        if (event.key === 'Enter') {
-                            document.execCommand('insertLineBreak');
-                            event.preventDefault();
-                        }
-                    }}
-                    on:paste={(event) => {
-                        event.preventDefault();
-                        var text = event.clipboardData.getData('text/plain');
-                        document.execCommand('insertText', false, text);
-                    }}
-                    class="p-2 inline-block whitespace-pre-wrap outline-none"
-                    role="textbox"
-                    contenteditable>
-                    {content.text}
-                </div>
-            </div>
-        </div>
-        <div class="fixed right-0 p-2 bg-gray-400 rounded shadow-md opacity-75">
+<div class="container mx-auto flex mb-8 justify-center resize-none">
+    <div
+        bind:this={editorNode}
+        class="p-2 bg-gray-300 border-l-4 border-r-4 focus-within:border-orange-700 shadow-md rounded" />
+    <div class="fixed right-0 p-2 bg-gray-400 rounded shadow-md opacity-75">
+        {#await promise then content}
             <div class="text-sm tracking-tighter">Last Modified: {displayDate(content.lastModified)}</div>
             <div class="text-sm tracking-tighter">
                 Last Sync:
@@ -122,9 +126,7 @@
                 })}
             </div>
             <div class="inline-block">
-                {#if textContent === content.text || textContent
-                        ?.replace('<br>', '')
-                        .replace('<div>', '') === content.text}
+                {#if !changedContent}
                     <div class="flex p-2 mt-2 bg-teal-600 rounded-md cursor-pointer hover:shadow-md" on:click={refresh}>
                         <svg
                             class="fill-current stroke-current w-6 h-6 mr-1"
@@ -161,9 +163,6 @@
                     </div>
                 {/if}
             </div>
-        </div>
+        {/await}
     </div>
-{:catch error}
-    <div>Loading {file} from bucket {bucket}</div>
-    <div>ERROR: {error}</div>
-{/await}
+</div>

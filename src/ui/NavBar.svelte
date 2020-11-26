@@ -21,7 +21,7 @@
 </script>
 
 <!-- Draggable top bar -->
-<div class="fixed top-0 w-full h-9 bg-gray-600" style="-webkit-app-region: drag">
+<div class="fixed top-0 w-full h-9 bg-gray-600 z-10" style="-webkit-app-region: drag">
         <div class="flex items-center justify-between flex-wrap text-gray-800">
             <div class="w-auto block ml-20 mt-1 text-xl font-serif font-semibold">SpotOn</div>
             {#if $login}
