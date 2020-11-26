@@ -24,11 +24,11 @@
     const bucket = variables.find((v) => v.key.includes('S3AssetsBucketName')).value;
     const encoder = new TextDecoder('utf-8');
     const file = 'config-files/overrides.properties';
-    let fetchedContent: string;
-    let changedContent = false;
 
     let editorNode: HTMLElement;
     let editor: CodeJar;
+    let fetchedContent: TextContent;
+    let changedContent = false;
 
     onMount(() => {
         editor = CodeJar(
@@ -39,22 +39,19 @@
             })
         );
         editor.onUpdate((text) => {
-            console.log('update', text === fetchedContent);
-
-            changedContent = text !== fetchedContent;
+            changedContent = text !== fetchedContent.text;
         });
         return () => {
             editor.destroy();
         };
     });
 
-    let promise: Promise<TextContent>;
     let error: Error;
     let processRequest = false;
     function refresh() {
         processRequest = true;
         error = null;
-        promise = $s3Client
+        $s3Client
             .send(new GetObjectCommand({ Bucket: bucket, Key: file, ResponseCacheControl: 'no-cache' }))
             .then((response) => {
                 const lastModified = new Date(response.$metadata.httpHeaders['last-modified']);
@@ -63,9 +60,9 @@
             })
             .then(([uint8Array, lastModified, lastSynced]) => {
                 const text = encoder.decode(uint8Array as Uint8Array);
-                fetchedContent = text;
+                fetchedContent = { text, lastModified, lastSynced } as TextContent;
+                changedContent = text !== fetchedContent.text;
                 editor.updateCode(text);
-                return { text, lastModified, lastSynced } as TextContent;
             })
             .catch((error) => (error = error))
             .finally(() => (processRequest = false));
@@ -111,15 +108,18 @@
 </div>
 
 <div class="container mx-auto flex mb-8 justify-center resize-none">
+    <!-- Editor -->
     <div
         bind:this={editorNode}
         class="p-2 bg-gray-300 border-l-4 border-r-4 focus-within:border-orange-700 shadow-md rounded" />
-    <div class="fixed right-0 p-2 bg-gray-400 rounded shadow-md opacity-75">
-        {#await promise then content}
-            <div class="text-sm tracking-tighter">Last Modified: {displayDate(content.lastModified)}</div>
+
+    <!-- Side controls -->
+    {#if fetchedContent}
+        <div class="fixed right-0 p-2 bg-gray-400 rounded shadow-md opacity-75" in:blur>
+            <div class="text-sm tracking-tighter">Last Modified: {displayDate(fetchedContent.lastModified)}</div>
             <div class="text-sm tracking-tighter">
                 Last Sync:
-                {humanizeDuration(Math.max($now.getTime() - content.lastSynced.getTime(), 1000), {
+                {humanizeDuration(Math.max($now.getTime() - fetchedContent.lastSynced.getTime(), 1000), {
                     largest: 1,
                     round: true,
                     units: ['d', 'h', 'm', 's'],
@@ -145,6 +145,6 @@
                     </span>
                 </EitherOr>
             </div>
-        {/await}
-    </div>
+        </div>
+    {/if}
 </div>
