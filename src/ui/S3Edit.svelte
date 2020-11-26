@@ -15,6 +15,9 @@
     import { now, displayDate } from '../svelte/dates';
     import { CodeJar } from 'codejar';
     import { withLineNumbers } from 'codejar/linenumbers';
+    import Button from './Button.svelte';
+    import EitherOr from './EitherOr.svelte';
+    import { refreshSpec, saveSpec } from '../svg/SvgSpec';
 
     const variables = $inputs.flatMap((input) => input.variables);
     // $: console.log(variables);
@@ -28,7 +31,6 @@
     let editor: CodeJar;
 
     onMount(() => {
-        console.log('init editor');
         editor = CodeJar(
             editorNode,
             withLineNumbers(() => {}, {
@@ -48,7 +50,10 @@
 
     let promise: Promise<TextContent>;
     let error: Error;
+    let processRequest = false;
     function refresh() {
+        processRequest = true;
+        error = null;
         promise = $s3Client
             .send(new GetObjectCommand({ Bucket: bucket, Key: file, ResponseCacheControl: 'no-cache' }))
             .then((response) => {
@@ -62,32 +67,27 @@
                 editor.updateCode(text);
                 return { text, lastModified, lastSynced } as TextContent;
             })
-            .catch((error) => (error = error));
+            .catch((error) => (error = error))
+            .finally(() => (processRequest = false));
     }
 
     function save() {
+        processRequest = true;
         error = null;
-        console.log('save', editor.toString());
-        // $s3Client
-        //     .send(
-        //         new PutObjectCommand({
-        //             Bucket: bucket,
-        //             Key: file,
-        //             Body: editor.toString(),
-        //         })
-        //     )
-        //     .then((_) => refresh())
-        //     .catch((error) => (error = error));
+        $s3Client
+            .send(
+                new PutObjectCommand({
+                    Bucket: bucket,
+                    Key: file,
+                    Body: editor.toString(),
+                })
+            )
+            .then((_) => refresh())
+            .catch((error) => (error = error))
+            .finally(() => (processRequest = false));
     }
 
     refresh();
-    $: {
-        console.log('changedContent', changedContent);
-
-        if (fetchedContent) {
-            // console.log(fetchedContent);
-        }
-    }
 </script>
 
 <div class="container mx-auto flex justify-center" in:blur>
@@ -125,43 +125,25 @@
                     units: ['d', 'h', 'm', 's'],
                 })}
             </div>
-            <div class="inline-block">
-                {#if !changedContent}
-                    <div class="flex p-2 mt-2 bg-teal-600 rounded-md cursor-pointer hover:shadow-md" on:click={refresh}>
-                        <svg
-                            class="fill-current stroke-current w-6 h-6 mr-1"
-                            xmlns="http://www.w3.org/2000/svg"
-                            aria-hidden="true"
-                            focusable="false"
-                            style="-ms-transform: rotate(360deg); -webkit-transform: rotate(360deg); transform: rotate(360deg);"
-                            preserveAspectRatio="xMidYMid meet"
-                            viewBox="0 0 24 24">
-                            <g fill="none">
-                                <path
-                                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 0 0 4.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 0 1-15.357-2m15.357 2H15"
-                                    stroke-width="2"
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round" />
-                            </g>
-                        </svg>
-                        <div>Refresh</div>
-                    </div>
-                {:else}
-                    <div class="flex p-2 mt-2 bg-green-600 rounded-md cursor-pointer hover:shadow-md" on:click={save}>
-                        <svg
-                            class="stroke-current w-6 h-6 mr-1"
-                            xmlns="http://www.w3.org/2000/svg"
-                            fill="none"
-                            viewBox="0 0 24 24">
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="2"
-                                d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
-                        </svg>
-                        <div>Save</div>
-                    </div>
-                {/if}
+            <div class="inline-block mt-1">
+                <EitherOr either={!changedContent}>
+                    <span slot="either">
+                        <Button
+                            name="Refresh"
+                            svgSpec={{ ...refreshSpec, size: 'w-5' }}
+                            pressed={processRequest}
+                            on:click={refresh}
+                            extraClass="bg-teal-600" />
+                    </span>
+                    <span slot="or">
+                        <Button
+                            name="Save"
+                            svgSpec={{ ...saveSpec, size: 'w-5' }}
+                            pressed={processRequest}
+                            on:click={save}
+                            extraClass="bg-green-600" />
+                    </span>
+                </EitherOr>
             </div>
         {/await}
     </div>
