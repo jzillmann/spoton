@@ -10,7 +10,7 @@
     import { GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
     import { streamCollector } from '@aws-sdk/fetch-http-handler';
     import { s3Client } from '../aws/clients';
-    import { inputs } from '../input/inputs';
+    import { inputRegistry } from '../input/inputs';
     import humanizeDuration from 'humanize-duration';
     import { now, displayDate } from '../svelte/dates';
     import { CodeJar } from 'codejar';
@@ -19,11 +19,9 @@
     import EitherOr from './EitherOr.svelte';
     import { refreshSpec, saveSpec } from '../svg/SvgSpec';
 
-    const variables = $inputs.flatMap((input) => input.variables);
-    // $: console.log(variables);
-    const bucket = variables.find((v) => v.key.includes('S3AssetsBucketName')).value;
-    const encoder = new TextDecoder('utf-8');
+    const bucket = inputRegistry.variableValue('AssetsBucket');
     const file = 'config-files/overrides.properties';
+    const encoder = new TextDecoder('utf-8');
 
     let editorNode: HTMLElement;
     let editor: CodeJar;
@@ -110,14 +108,14 @@
 <div class="container mx-auto flex justify-center" in:blur>
     <div class="mt-10">
         <div class="flex text-4xl mb-3 text-center">
-            <div class="font-mono">S3:</div>
-            <div class="font-serif font-bold">{file}</div>
+            <div class="font-serif mr-1">S3:</div>
+            <div class="font-mono font-bold">{file}</div>
         </div>
 
-        <div class="flex text-xl font-serif mb-3 text-center">
-            <div class="mr-1">Bucket:</div>
+        <div class="flex text-xl mb-3 text-center">
+            <div class="font-serif mr-1">Bucket:</div>
             <a
-                class="italic hover:underline"
+                class="font-mono font-semibold hover:underline"
                 href="https://console.aws.amazon.com/s3/buckets/{bucket}"
                 target="_blank">{bucket}</a>
         </div>

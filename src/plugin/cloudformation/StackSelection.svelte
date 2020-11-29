@@ -1,29 +1,31 @@
 <script lang="ts">
     import { fly, slide, blur } from 'svelte/transition';
-    import type { SubmitFunction } from '../../input/InputPlugin';
+    import { region } from '../../auth/auth';
     import type { Input } from '../../config/config';
+    import type ExpressionResolver from '../../input/ExpressionResolver';
+    import type { SubmitFunction } from '../../input/InputPlugin';
     import StackInput from './StackInput';
     import Loading from '../../ui/Loading.svelte';
     import Spinner from '../../ui/Spinner.svelte';
-    import InputVariable from '../../input/InputVariable';
-    import {
-        ListStacksCommand,
-        StackStatus,
-        StackSummary,
-        DescribeStacksCommand,
-    } from '@aws-sdk/client-cloudformation';
+    import ResolvedVariable from '../../input/ResolvedVariable';
+    import { StackStatus, StackSummary, DescribeStacksCommand, Stack } from '@aws-sdk/client-cloudformation';
     import { cloudFormationClient } from '../../aws/clients';
     import humanizeDuration from 'humanize-duration';
-    import { assert } from '../../assert';
+    import { assert, assertDefined } from '../../assert';
 
     export let input: Input;
+    export let expressionResolver: ExpressionResolver;
     export let submitFunction: SubmitFunction;
 
     let selectedStacks = new Array<String>();
     let selectedInputs = new Array<String>();
-    $: listStacksPromise = $cloudFormationClient.send(
-        new ListStacksCommand({ StackStatusFilter: [StackStatus.CREATE_COMPLETE] })
-    );
+    $: listStacksPromise = $cloudFormationClient.send(new DescribeStacksCommand({})).then((response) => {
+        if (!input.filter) {
+            return response.Stacks;
+        }
+        const filteredStacks = expressionResolver.filterArray(response, input.filter);
+        return filteredStacks as Stack[];
+    });
     let describeStackPromise: Promise<void>;
 
     function submit(stack: StackSummary) {
@@ -40,9 +42,16 @@
                     `Expected one stack but got ${JSON.stringify(stackDetails.Stacks)}`
                 );
                 const stackDetail = stackDetails.Stacks[0];
-                const variables = stackDetail.Outputs.map(
-                    (output) => new InputVariable(output.OutputKey, output.OutputValue)
-                );
+                const variables = input.variables.map((inputVar) => {
+                    const varValue = expressionResolver.match(stackDetail, inputVar.expression);
+                    assertDefined(
+                        varValue,
+                        `Could not resolve variable '${inputVar.key}' with expression ${
+                            inputVar.expression
+                        } from ${JSON.stringify(stackDetail)}`
+                    );
+                    return new ResolvedVariable(inputVar.key, varValue);
+                });
                 const resolvedInput = new StackInput(
                     input,
                     variables,
@@ -56,7 +65,7 @@
 </script>
 
 <Loading promise={listStacksPromise} message="Fetching stacks" />
-{#await listStacksPromise then response}
+{#await listStacksPromise then stacks}
     <div class="ml-4 mb-3 flex items-baseline content-start">
         Pick stack
         {#each selectedInputs as inputName}
@@ -77,7 +86,7 @@
         in:fly={{ x: 2000 }}
         class="p-2 grid whitespace-no-wrap"
         style="grid-template-columns: max-content max-content max-content min-content;">
-        {#each response.StackSummaries as stack}
+        {#each stacks as stack}
             <div
                 class="contents row hover:shadow"
                 class:selected={selectedStacks.includes(stack.StackName)}
@@ -95,6 +104,20 @@
                         {/await}
                     {/if}
                 </div>
+            </div>
+        {:else}
+            <div class="rounded shadow">
+                <div class="p-2 bg-yellow-500 text-lg font-semibold">No '{input.name}' stack found!</div>
+                <ul class="p-2 bg-gray-300 list-disc list-inside">
+                    {#if input.filter}
+                        <li>
+                            Maybe the filter
+                            <span class="font-semibold font-mono">{input.filter}</span>
+                            is outdated ?
+                        </li>
+                    {/if}
+                    <li>Maybe you region <span class="font-semibold font-mono">{$region}</span> isn't correct ?</li>
+                </ul>
             </div>
         {/each}
     </div>

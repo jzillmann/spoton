@@ -1,5 +1,5 @@
 import type { Input } from '../config/config';
-import type InputVariable from './InputVariable';
+import type ResolvedVariable from './ResolvedVariable';
 
 /**
  * A defined Input that has been filled in.
@@ -7,11 +7,15 @@ import type InputVariable from './InputVariable';
 export default abstract class ResolvedInput {
     inputName: string;
     inputType: string;
-    variables: InputVariable[];
+    variables: ResolvedVariable[];
 
-    constructor(input: Input, variables: InputVariable[]) {
+    constructor(input: Input, variables: ResolvedVariable[]) {
         this.inputName = input.name;
         this.inputType = input.type;
         this.variables = variables;
+    }
+
+    variable(key: string): ResolvedVariable {
+        return this.variables.find((v) => v.key === key);
     }
 }

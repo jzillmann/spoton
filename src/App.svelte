@@ -2,8 +2,8 @@
     import TailwindCss from './TailwindCss.svelte';
     import { initExternal } from './external';
     import { login } from './auth/auth';
-    import { inputs } from './input/inputs';
-    import { defaultConfig } from './defaults';
+    import { resolvedInputs } from './input/inputs';
+    import { defaultConfig as config } from './defaults';
 
     import NavBar from './ui/NavBar.svelte';
     import Login from './ui/Login.svelte';
@@ -18,11 +18,10 @@
         if (!$login) {
             component = new ComponentDefinition(Login);
         } else {
-            if (!$inputs) {
-                const config = defaultConfig;
-                component = new ComponentDefinition(ResolveInputs, { inputs: config.inputs });
-            } else {
+            if ($resolvedInputs === config.inputs.length) {
                 component = new ComponentDefinition(S3Edit);
+            } else {
+                component = new ComponentDefinition(ResolveInputs, { inputs: config.inputs });
             }
         }
     }

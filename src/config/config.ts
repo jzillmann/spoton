@@ -6,6 +6,15 @@ export interface Config {
 export interface Input {
     name: string;
     type: string;
+    filter?: string;
+    expects: string;
+    variables: Variable[];
+    // auto: boolean;
+}
+
+export interface Variable {
+    key: string;
+    expression: string;
 }
 
 export interface Page {
