@@ -7,11 +7,17 @@ module.exports = {
     purge: [{ content: ['./src/**/*.svelte', './public/**/*.html'], css: ['./public/**/*.css'], enabled: production }],
     theme: {
         extend: {
+            width: {
+                9: '2.25rem',
+            },
             height: {
                 9: '2.25rem',
             },
             margin: {
                 7: '1.75rem',
+            },
+            borderWidth: {
+                3: '3px',
             },
             keyframes: {
                 'spin-reverse': {

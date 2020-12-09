@@ -26,7 +26,7 @@
             <div>Waiting on profiles...</div>
         {:then profiles}
             <div class="flex flex-wrap" in:fly={{ x: 2000 }}>
-                {#each profiles as aProfile, idx}
+                {#each profiles as aProfile}
                     <div on:click={() => login(aProfile)}>
                         <Card>
                             <span slot="header">{aProfile.name}</span>

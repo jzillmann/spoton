@@ -16,17 +16,17 @@ export const defaultConfig: Config = {
             name: 'App',
             type: 'CloudFormation:Stack',
             filter:
-                'Stacks[Parameters.ParameterKey~>/InputsDefaultEMRClusterName/ and Parameters.ParameterValue~>/${Base.EmrClusterName}$/]',
+                'Stacks[Parameters.ParameterKey~>/EmrClusterName/ and Parameters.ParameterValue~>/${Base.EmrClusterName}/]',
             expects: '*',
             // auto: true,
             variables: [
                 {
                     key: 'Address',
-                    expression: 'Outputs[OutputKey~>/SpotlightALBPublicLoadBalancerDNSName/].OutputValue',
+                    expression: 'Outputs[OutputKey~>/LoadBalancerDnsName/].OutputValue',
                 },
                 {
                     key: 'AssetsBucket',
-                    expression: 'Outputs[OutputKey~>/SpotlightS3AssetsBucketName/].OutputValue',
+                    expression: 'Outputs[OutputKey~>/AppBucketName/].OutputValue',
                 },
             ],
         },

@@ -6,7 +6,7 @@
     import type { SubmitFunction } from '../../input/InputPlugin';
     import StackInput from './StackInput';
     import Loading from '../../ui/Loading.svelte';
-    import Spinner from '../../ui/Spinner.svelte';
+
     import ResolvedVariable from '../../input/ResolvedVariable';
     import { StackStatus, StackSummary, DescribeStacksCommand, Stack } from '@aws-sdk/client-cloudformation';
     import { cloudFormationClient } from '../../aws/clients';
@@ -26,66 +26,43 @@
         const filteredStacks = expressionResolver.filterArray(response, input.filter);
         return filteredStacks as Stack[];
     });
-    let describeStackPromise: Promise<void>;
 
-    function submit(stack: StackSummary) {
+    function submit(stack: Stack) {
         if (selectedStacks.includes(stack.StackName)) {
             return;
         }
         selectedStacks = [...selectedStacks, stack.StackName];
         selectedInputs = [...selectedInputs, input.name];
-        describeStackPromise = $cloudFormationClient
-            .send(new DescribeStacksCommand({ StackName: stack.StackName }))
-            .then((stackDetails) => {
-                assert(
-                    stackDetails.Stacks.length == 1,
-                    `Expected one stack but got ${JSON.stringify(stackDetails.Stacks)}`
-                );
-                const stackDetail = stackDetails.Stacks[0];
-                const variables = input.variables.map((inputVar) => {
-                    const varValue = expressionResolver.match(stackDetail, inputVar.expression);
-                    assertDefined(
-                        varValue,
-                        `Could not resolve variable '${inputVar.key}' with expression ${
-                            inputVar.expression
-                        } from ${JSON.stringify(stackDetail)}`
-                    );
-                    return new ResolvedVariable(inputVar.key, varValue);
-                });
-                const resolvedInput = new StackInput(
-                    input,
-                    variables,
-                    stack.StackName,
-                    stack.StackId,
-                    stack.StackStatus as StackStatus
-                );
-                submitFunction(resolvedInput);
-            });
+
+        const variables = input.variables.map((inputVar) => {
+            const varValue = expressionResolver.match(stack, inputVar.expression);
+            assertDefined(
+                varValue,
+                `Could not resolve variable '${inputVar.key}' with expression ${
+                    inputVar.expression
+                } from ${JSON.stringify(stack)}`
+            );
+            return new ResolvedVariable(inputVar.key, varValue);
+        });
+        const resolvedInput = new StackInput(
+            input,
+            variables,
+            stack.StackName,
+            stack.StackId,
+            stack.StackStatus as StackStatus
+        );
+        submitFunction(resolvedInput);
     }
 </script>
 
 <Loading promise={listStacksPromise} message="Fetching stacks" />
+
+<!-- Stack selection list -->
 {#await listStacksPromise then stacks}
-    <div class="ml-4 mb-3 flex items-baseline content-start">
-        Pick stack
-        {#each selectedInputs as inputName}
-            <div class="ml-2 font-bold italic text-indigo-400"><del>{inputName}</del></div>
-        {/each}
-        {#if !selectedInputs.includes(input.name)}
-            {#key input.name}
-                <div in:fly={{ y: -200 }} class="ml-2 font-bold italic text-teal-500">{input.name}</div>
-            {/key}
-        {/if}
-    </div>
-    {#await describeStackPromise}
-        <span />
-    {:catch error}
-        <div class="ml-2 text-red-800" in:slide>ERROR: {error}</div>
-    {/await}
     <div
         in:fly={{ x: 2000 }}
         class="p-2 grid whitespace-no-wrap"
-        style="grid-template-columns: max-content max-content max-content min-content;">
+        style="grid-template-columns: max-content max-content max-content;">
         {#each stacks as stack}
             <div
                 class="contents row hover:shadow"
@@ -97,18 +74,13 @@
                     {humanizeDuration(new Date().getTime() - stack.CreationTime.getTime(), { largest: 1, round: true })}
                     old
                 </div>
-                <div class="w-6">
-                    {#if selectedStacks[selectedStacks.length - 1] === stack.StackName}
-                        {#await describeStackPromise}
-                            <Spinner class="h-5 w-5 mt-1" />
-                        {/await}
-                    {/if}
-                </div>
             </div>
-        {:else}
-            <div class="rounded shadow">
+        {/each}
+    </div>
+    {#if stacks.length === 0}
+        <div class="rounded shadow w-3/4">
                 <div class="p-2 bg-yellow-500 text-lg font-semibold">No '{input.name}' stack found!</div>
-                <ul class="p-2 bg-gray-300 list-disc list-inside">
+                <ul class="p-2 bg-gray-300 list-disc list-inside ">
                     {#if input.filter}
                         <li>
                             Maybe the filter
@@ -118,9 +90,8 @@
                     {/if}
                     <li>Maybe you region <span class="font-semibold font-mono">{$region}</span> isn't correct ?</li>
                 </ul>
-            </div>
-        {/each}
-    </div>
+        </div>
+    {/if}
 {/await}
 
 <style>

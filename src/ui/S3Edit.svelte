@@ -105,34 +105,35 @@
     doRefresh(false);
 </script>
 
-<div class="container mx-auto flex justify-center" in:blur>
-    <div class="mt-10">
-        <div class="flex text-4xl mb-3 text-center">
-            <div class="font-serif mr-1">S3:</div>
-            <div class="font-mono font-bold">{file}</div>
-        </div>
+<div in:blur={{ delay: 450 }}>
+    <div class="container mx-auto flex justify-center" in:blur>
+        <div class="mt-10">
+            <div class="flex text-4xl mb-3 text-center">
+                <div class="font-serif mr-1">S3:</div>
+                <div class="font-mono font-bold">{file}</div>
+            </div>
 
-        <div class="flex text-xl mb-3 text-center">
-            <div class="font-serif mr-1">Bucket:</div>
-            <a
-                class="font-mono font-semibold hover:underline"
-                href="https://console.aws.amazon.com/s3/buckets/{bucket}"
-                target="_blank">{bucket}</a>
+            <div class="flex text-xl mb-3 text-center">
+                <div class="font-serif mr-1">Bucket:</div>
+                <a
+                    class="font-mono font-semibold hover:underline"
+                    href="https://console.aws.amazon.com/s3/buckets/{bucket}"
+                    target="_blank">{bucket}</a>
+            </div>
+            {#if error}
+                <div class="text-red-800 mb-4 max-w-lg" transition:slide>ERROR: {error}</div>
+            {/if}
         </div>
-        {#if error}
-            <div class="text-red-800 mb-4 max-w-lg" transition:slide>ERROR: {error}</div>
-        {/if}
     </div>
-</div>
 
-<div class="container mx-auto flex mb-8 justify-center resize-none">
-    <!-- Editor -->
-    <div
+    <div class="container mx-auto flex mb-8 justify-center resize-none">
+        <!-- Editor -->
+        <div
         bind:this={editorNode}
         class="p-2 bg-gray-300 border-l-4 border-r-4 focus-within:border-orange-700 shadow-md rounded" />
 
-    <!-- Side controls -->
-    {#if fetchedContent}
+        <!-- Side controls -->
+        {#if fetchedContent}
         <div class="fixed right-0 p-2 bg-gray-400 rounded shadow-md opacity-75" in:blur>
             <div class="text-sm tracking-tighter">Last Modified: {displayDate(fetchedContent.lastModified)}</div>
             <div class="text-sm tracking-tighter">
@@ -170,4 +171,5 @@
             {/if}
         </div>
     {/if}
+    </div>
 </div>
