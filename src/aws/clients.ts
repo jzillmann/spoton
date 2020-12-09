@@ -6,7 +6,7 @@ import { ClientConfig, toClientConfig } from '../aws/ClientConfig';
 import { CloudFormationClient } from '@aws-sdk/client-cloudformation';
 
 export const clientConfig = derived([login, region], ([$login, $region]) =>
-    $login ? toClientConfig($login.profile, $region) : undefined
+    $login ? toClientConfig($login.key, $login.secret, $region) : undefined
 );
 
 export const s3Client: Readable<S3Client> = derived(clientConfig, ($config, set) => {

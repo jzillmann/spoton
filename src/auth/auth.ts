@@ -1,5 +1,5 @@
 import { writable } from 'svelte/store';
-import { IAMClient, GetUserCommand } from '@aws-sdk/client-iam';
+import { IAMClient, GetUserCommand, IAMClientConfig } from '@aws-sdk/client-iam';
 import { EC2Client, DescribeRegionsCommand } from '@aws-sdk/client-ec2';
 import { parse as parseArn } from '@aws-sdk/util-arn-parser';
 import { defaultRegion } from '../defaults';
@@ -14,7 +14,20 @@ export const region = writable<string>(undefined);
 
 export function loginByProfile(loginProfile: Profile): Promise<void> {
     const loginRegion = loginProfile.defaultRegion || defaultRegion;
-    const config = { ...toClientConfig(loginProfile, loginRegion) };
+    return doLogin(loginProfile.key, loginProfile.secret, loginRegion, loginProfile);
+}
+
+export function loginByKey(accessKey: string, accessSecret: string): Promise<void> {
+    return doLogin(accessKey, accessSecret, defaultRegion);
+}
+
+function doLogin(
+    accessKey: string,
+    accessSecret: string,
+    loginRegion: string,
+    loginProfile: Profile = undefined
+): Promise<void> {
+    const config = { ...toClientConfig(accessKey, accessSecret, loginRegion) };
     const iamClient = new IAMClient(config);
     const ec2Client = new EC2Client(config);
     const userPromise = iamClient.send(new GetUserCommand({}));
@@ -33,8 +46,8 @@ export function loginByProfile(loginProfile: Profile): Promise<void> {
             login.set({
                 account,
                 userName,
-                key: loginProfile.key,
-                secret: loginProfile.secret,
+                key: accessKey,
+                secret: accessSecret,
                 profile: loginProfile,
                 availableRegions: regionNames,
             });
