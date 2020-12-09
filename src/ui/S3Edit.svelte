@@ -44,7 +44,7 @@
         };
     });
 
-    let error: Error;
+    let error: string;
     let processRequest = false;
     let message: string;
 
@@ -74,7 +74,7 @@
                     }
                 }
             })
-            .catch((error) => (error = error))
+            .catch((e) => (error = `Failed to load file: ${e.message}`))
             .finally(() => (processRequest = false));
     }
 
@@ -93,7 +93,7 @@
                 setMessage('Saved successfully');
                 doRefresh(false);
             })
-            .catch((error) => (error = error))
+            .catch((e) => (error = `Failed to save file: ${e.message}`))
             .finally(() => (processRequest = false));
     }
 
@@ -121,7 +121,7 @@
                     target="_blank">{bucket}</a>
             </div>
             {#if error}
-                <div class="text-red-800 mb-4 max-w-lg" transition:slide>ERROR: {error}</div>
+                <div class="text-red-800 mb-4 max-w-lg" transition:slide>{error}</div>
             {/if}
         </div>
     </div>
